@@ -115,7 +115,7 @@ if (!string.IsNullOrWhiteSpace(file))
 
     if(hadSamples)
     {
-        Console.Write("Would you like to play some random samples from the swdl file? [Y/N, default=N]: ");
+        Console.Write("Would you like to play all of the samples from the swdl file? [Y/N, default=N]: ");
 
         bool playSamples;
 
