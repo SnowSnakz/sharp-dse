@@ -169,6 +169,10 @@ if (!string.IsNullOrWhiteSpace(file))
                 {
                     var sample = wavi[i];
 
+                    if(wavi.TryFindOldID(i, out var oldID))
+                    {
+                        Console.WriteLine($"Sample {i} has an old id, {oldID}. This is not an issue, and is likely due to unused entries being cut by SharpDSE.");
+                    }
                     Console.WriteLine($"Loading {i} of {wavi.Count}... ({sample.BitDepth}-bits {sample.Format} - {sample.LoopLength * sample.SamplesPerBlock} samples @ {sample.SampleRate}hz)");
 
                     SampleData data = pcmd.LoadSampleData(sample);
