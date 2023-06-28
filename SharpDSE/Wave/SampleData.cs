@@ -103,7 +103,6 @@ namespace SharpDSE.Wave
         {
             byte[] ibuf = reader.ReadBytes(2);
 
-            // Converting to big endian this time...
             if (!BitConverter.IsLittleEndian)
                 Array.Reverse(ibuf);
 
@@ -117,9 +116,6 @@ namespace SharpDSE.Wave
             short stepIndex = BitConverter.ToInt16(ibuf);
             short step = ImaStepTable[stepIndex];
 
-            // I kinda understand this, but at the same time not really...
-            // If anyone wants to help explain this, I would be happy!
-            // (Knowing me, I probably did this wrong anyways...)
             for (int i = 0; i < data.Length; i += 2)
             {
                 byte samp2 = reader.ReadByte();
@@ -127,12 +123,6 @@ namespace SharpDSE.Wave
                 byte n1 = (byte)((samp2 & 0xF0) >> 4);
                 byte n2 = (byte)(samp2 & 0x0F);
 
-                /*
-                stepIndex = (short)Math.Clamp(stepIndex + ImaIndexTable[n1], 0, 88);
-                short diff = (short)(((n1 & 7) + ((n1 & 8) == 8 ? -0.5f : 0.5f)) * step / 4);
-                predictor = (short)(predictor + diff);
-                step = ImaStepTable[stepIndex];
-                */
                 MoveForward(ref predictor, ref stepIndex, ref step, n1);
 
                 data[i] = (short)(predictor = Math.Clamp(predictor, short.MinValue, short.MaxValue));
@@ -140,13 +130,6 @@ namespace SharpDSE.Wave
                 // Don't process second nibble if end of data is reached.
                 if (i + 1 >= data.Length)
                     break;
-
-                /*
-                stepIndex = (short)Math.Clamp(stepIndex + ImaIndexTable[n2], 0, 88);
-                diff = (short)(((n2 & 7) + ((n2 & 8) == 8 ? -0.5f : 0.5f)) * step / 4);
-                predictor = (short)(predictor + diff);
-                step = ImaStepTable[stepIndex];
-                */
 
                 MoveForward(ref predictor, ref stepIndex, ref step, n2);
 
