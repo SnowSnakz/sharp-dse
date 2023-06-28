@@ -110,7 +110,7 @@ namespace SharpDSE.Wave
 
             ibuf = reader.ReadBytes(2);
 
-            short stepIndex = ibuf[0] < 89 ? (ibuf[1] < 89 ? ibuf[1] : ibuf[0]) : ibuf[1];
+            short stepIndex = ibuf[0] < 89 ? (ibuf[1] < 89 ? (ibuf[1] > ibuf[0] ? ibuf[1] : ibuf[0]) : ibuf[0]) : ibuf[1];
             short step = ImaStepTable[stepIndex % 89];
 
             for (int i = 0; i < data.Length; i += 2)
