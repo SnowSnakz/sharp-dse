@@ -7,8 +7,8 @@ Right now the project is still in it's early stages.
 
 ## What can I do with it at the moment?
 * If you have a Pokémon Mystery Dungeon: Explorers of Sky ROM, you can extract the rom and run bgm.swd through the SharpDSE.Test program to view information on the file and play all of the samples (currently without envolope.)
-  This is the output I got:
-  ```
+  This is the output I got
+```
 Version:       0x0415
 File Name:     B.SWD
 Creation Date: 11/19/2008 7:45:06 AM
