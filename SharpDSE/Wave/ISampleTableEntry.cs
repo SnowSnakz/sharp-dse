@@ -17,12 +17,12 @@ namespace SharpDSE.Wave
         /// <remarks>
         /// According to psy_commando's notes: "Empty entries in the Wave Table are counted!"
         /// </remarks>
-        ushort ID { get; }
+        ushort ID { get; set; }
 
         /// <summary>
         /// The MIDI note associated with the sample. (The note that the instrument sampled is playing.) 
         /// </summary>
-        byte RootKey { get; }
+        byte RootKey { get; set; }
 
         /// <summary>
         /// The fine tuning of the samples pitch (in cents)

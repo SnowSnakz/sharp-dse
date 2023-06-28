@@ -1,111 +1,40 @@
-﻿namespace SharpDSE.SwdlChunks
+﻿using SharpDSE.Wave;
+using SharpDSE.Wave.SampleTable;
+using System.Collections;
+
+namespace SharpDSE.SwdlChunks
 {
-    // Anything marked with a ? means psy_commando put in the notes that it's only a possibility (not yet confirmed) that something is the correct usage of the raw data here.
-
-    public sealed class WaveInfoChunk : SwdlChunk<WaveInfoChunk>
+    /*
+     * To add support for a specific version:
+     *   Create a child class.
+     *   
+     *   Override the DetectFormat method.
+     *   
+     *   Call ReadEntries{TEntry} if your supported version is being used, where TEntry is the structure you want to load.
+     *     It is recommended that TEntry is a struct, although this is not required.
+     *     TEntry is required to implement ISampleTableEntry and IBinaryReadable, and must have a parameterless constructor.
+     *     Implementing IBinaryWritable is recommended, but not required. (You will have holes in saved files if you don't.)
+     *     
+     *   Return true if you attempt to load anything (regardless of if you actually loaded anything), false otherwise.
+     *   
+     */
+    public class WaveInfoChunk : SwdlChunk<WaveInfoChunk>, IList<ISampleTableEntry>, IBinaryReadable, IBinaryWritable
     {
-        /// <summary>
-        /// The data for a Sample Table Entry. 
-        /// Although the entire structure is loaded, variables with unknown purposes are private to make things easier.
-        /// The private variables use the exact same type and naming patterns found in psy_commando's notes.
-        /// </summary>
-        public struct SampleEntryX415
+        List<ISampleTableEntry> samples = new();
+        private SwdlChunk chunk;
+
+
+        public int Count => samples.Count;
+        public bool IsReadOnly => false;
+
+        public ISampleTableEntry this[int index] 
         {
-            private ushort unk1; // (possible entry marker)
-            public ushort index;
-            public sbyte fineTuningCents;
-            public sbyte coarseTuning;
-            public byte rootKey;
-            public sbyte keyTranspose;
-            public sbyte volume;
-            public sbyte panning;
-            private byte unk5;
-            private byte unk58;
-            private ushort unk6;
-            private ushort unk7;
-            private ushort version; // (probably equal to Swdl.Version)
-            public ushort sampleFormat; // 0x0000 => 8 bit PCM(?); 0x0100 => 16 bit PCM; 0x0200 => 4 bit ADPCM; 0x0300 => PSG(?)
-            private byte unk9;
-            public bool loopSample;
-            private byte unk10;
-            public byte samplesPerBlock; // (?)
-            private byte unk11;
-            public byte bitDepth; // Usually 0x4. Seen 0x10 for the PCM16 samples used for the sine, triangle, square, saw wave samples.
-            private byte unk12;
-            private byte unk62;
-            private byte[] unk13;
-            public uint sampleRate;
-            public uint pcmdSampleOffset;
-            public uint loopStart;
-            public uint loopEnd;
-            public bool envelopeEnabled;
-            public byte envelopeMultiplier;
-            private byte unk19;
-            private byte unk20;
-            private ushort unk21;
-            private ushort unk22;
-            public sbyte attackVolume;
-            public sbyte attackTime;
-            public sbyte decayTime;
-            public sbyte sustainVolume;
-            public sbyte holdTime;
-            public sbyte decayTime2; // What is this for??? (Possible decay time if the note is released before the sustain phase?)
-            public sbyte releaseTime;
-            public sbyte unk57;
-
-
-            public SampleEntryX415(BinaryReader br)
+            get => samples[index];
+            set
             {
-                unk1 = br.ReadUInt16_LE();
-                index = br.ReadUInt16_LE();
-                fineTuningCents = br.ReadSByte();
-                coarseTuning = br.ReadSByte();
-                rootKey = br.ReadByte();
-                keyTranspose = br.ReadSByte();
-                volume = br.ReadSByte();
-                panning = br.ReadSByte();
-                unk5 = br.ReadByte();
-                unk58 = br.ReadByte();
-                unk6 = br.ReadUInt16_LE();
-                unk7 = br.ReadUInt16_LE();
-                version = br.ReadUInt16_LE();
-                sampleFormat = br.ReadUInt16_LE();
-                unk9 = br.ReadByte();
-                loopSample = br.ReadByte() == 1; // flag indicating whether the sample should be looped or not ! 1 = looped, 0 = not looped
-                unk10 = br.ReadByte();
-                samplesPerBlock = br.ReadByte();
-                unk11 = br.ReadByte();
-                bitDepth = br.ReadByte();
-                unk12 = br.ReadByte();
-                unk62 = br.ReadByte();
-                unk13 = br.ReadBytes(4);
-                sampleRate = br.ReadUInt32_LE();
-                pcmdSampleOffset = br.ReadUInt32_LE();
-                loopStart = br.ReadUInt32_LE();
-                loopEnd = br.ReadUInt32_LE();
-                envelopeEnabled = br.ReadByte() != 0; // If not == 0, the volume envelope is processed. Otherwise its ignored.
-                envelopeMultiplier = br.ReadByte();
-                unk19 = br.ReadByte();
-                unk20 = br.ReadByte();
-                unk21 = br.ReadUInt16_LE();
-                unk22 = br.ReadUInt16_LE();
-                attackVolume = br.ReadSByte();
-                attackTime = br.ReadSByte();
-                decayTime = br.ReadSByte();
-                sustainVolume = br.ReadSByte();
-                holdTime = br.ReadSByte();
-                decayTime2 = br.ReadSByte();
-                releaseTime = br.ReadSByte();
-                unk57 = br.ReadSByte();
+                value.ID = checked((ushort)index); // "checked" will throw an exception if an overflow happens during the cast. (Overflow == index too big for ushort)
+                samples[index] = value;
             }
-        }
-
-        private SampleEntryX415[] v415_samples = Array.Empty<SampleEntryX415>();
-        
-        public int SampleEntryCount => v415_samples.Length;
-        public SampleEntryX415 GetSampleX415(int sampleIndex)
-        {
-            return v415_samples[sampleIndex];
         }
 
         protected override bool CanImportLabel(byte[] label)
@@ -116,34 +45,156 @@
 
         protected override void Import(SwdlChunk chunk, BinaryReader reader)
         {
-            // Grab a reference to the stream (used for seeking)
-            var stream = reader.BaseStream;
-
-            // Read the sample entry offsets.
-            ushort[] sampleOffsets = new ushort[chunk.Owner.WaviSamplePointerCount];
-            for(int i = 0; i < sampleOffsets.Length; i++)
-            {
-                sampleOffsets[i] = reader.ReadUInt16_LE();
-            }
+            this.chunk = chunk;
 
             // Allocate sample info table
-            v415_samples = new SampleEntryX415[sampleOffsets.Length];
-            
+            samples.Clear();
+
+            Read(reader);
+
+        }
+
+        protected virtual bool DetectFormat(SwdlChunk chunk, ushort version, BinaryReader reader)
+        {
+            return false;
+        }
+
+        private void ReadEntries<TEntry>(ushort[] sampleOffsets, BinaryReader br) where TEntry : ISampleTableEntry, IBinaryReadable, new()
+        {
+            var stream = br.BaseStream;
+
             // Read the sample entries
-            for(int i = 0; i < sampleOffsets.Length; i++)
+            for (int i = 0; i < sampleOffsets.Length; i++)
             {
                 // If nullptr, skip.
                 if (sampleOffsets[i] == 0)
                     continue;
-                
+
                 // Seek if not already there.
-                if(stream.Position != sampleOffsets[i])
+                if (stream.Position != sampleOffsets[i])
                 {
                     stream.Seek(sampleOffsets[i], SeekOrigin.Begin);
                 }
 
                 // Read sample entry.
-                v415_samples[i] = new SampleEntryX415(reader);
+                TEntry result = new();
+                result.Read(br);
+                samples.Add(result);
+            }
+        }
+
+        public int IndexOf(ISampleTableEntry item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Insert(int index, ISampleTableEntry item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void RemoveAt(int index)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Add(ISampleTableEntry item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Clear()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Contains(ISampleTableEntry item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void CopyTo(ISampleTableEntry[] array, int arrayIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool Remove(ISampleTableEntry item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerator<ISampleTableEntry> GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Write(BinaryWriter writer)
+        {
+            // Create a temporary stream for writing the sample data
+            using var tempStream = new MemoryStream();
+            BinaryWriter tbr = new(tempStream);
+            
+            // Precalculate the size of the WaveTable
+            int waveTableSize = samples.Count * 2;
+
+            // Write the offset of each SampleTable Entry into the WaveTable.
+            for (int i = 0; i < samples.Count; i++)
+            {
+                // Grab the current entry
+                ISampleTableEntry sample = samples[i];
+
+                // If the entry is writable, record the temporary streams position as the offset.
+                if(sample is IBinaryWritable writable)
+                {
+                    // The offset is the WaveTable's size + the current position of the tempStream.
+                    // (The tempStream will be appended to the BaseStream after the WaveTable has been fully written.)
+                    writer.Write_LE((ushort)(waveTableSize + tempStream.Position));
+
+                    // Write the entry data into the temporary stream.
+                    writable.Write(tbr);
+                }
+                else
+                {
+                    // If the entry is not writable, write a null entry. These entries will be unable to load next time the file is loaded.
+                    // (This is why having your entries implement IBinaryWritable is recommended.)
+                    writer.Write((ushort)0);
+                }
+            }
+
+            // Write the sample info table entries.
+            tempStream.CopyTo(writer.BaseStream);
+        }
+
+        public void Read(BinaryReader reader)
+        {
+            // Read the sample entry offsets.
+            ushort[] sampleOffsets = new ushort[chunk.Owner.WaviSamplePointerCount];
+            for (int i = 0; i < sampleOffsets.Length; i++)
+            {
+                sampleOffsets[i] = reader.ReadUInt16_LE();
+            }
+
+            // If a child class overriding DetectFormat supports the version, it should have already loaded the entries.
+            if (DetectFormat(chunk, chunk.Owner.Version, reader))
+                return;
+
+            // Try to load entries.
+            switch (chunk.Owner.Version)
+            {
+                default:
+                    throw new NotSupportedException("Unknown SampleTable entry format for swdl version.");
+
+                case 0x415:
+                    ReadEntries<SampleEntryX415>(sampleOffsets, reader);
+                    break;
+
+                case 0x405:
+                    throw new NotImplementedException("Version 0x405 is not yet implemented.");
             }
         }
     }

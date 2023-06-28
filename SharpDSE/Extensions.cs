@@ -13,6 +13,7 @@ namespace SharpDSE
             if (BitConverter.IsLittleEndian)
                 return BitConverter.ToUInt32(ibuf);
 
+            // Convert Big Endian to Little Endian
             Array.Reverse(ibuf);
             return BitConverter.ToUInt32(ibuf);
         }
@@ -22,6 +23,7 @@ namespace SharpDSE
             if (BitConverter.IsLittleEndian)
                 return BitConverter.ToUInt16(ibuf);
 
+            // Convert Big Endian to Little Endian
             Array.Reverse(ibuf);
             return BitConverter.ToUInt16(ibuf);
         }
@@ -36,6 +38,28 @@ namespace SharpDSE
         {
             byte[] ibuf = br.ReadBytes(2);
             return ToUInt16_LE(ibuf);
+        }
+
+        public static void Write_LE(this BinaryWriter bw, ushort value)
+        {
+            byte[] ibuf = BitConverter.GetBytes(value);
+
+            // Convert Big Endian to Little Endian
+            if (!BitConverter.IsLittleEndian)
+                Array.Reverse(ibuf);
+
+            bw.Write(ibuf);
+        }
+
+        public static void Write_LE(this BinaryWriter bw, uint value)
+        {
+            byte[] ibuf = BitConverter.GetBytes(value);
+
+            // Convert Big Endian to Little Endian
+            if (!BitConverter.IsLittleEndian)
+                Array.Reverse(ibuf);
+
+            bw.Write(ibuf);
         }
     }
 }
