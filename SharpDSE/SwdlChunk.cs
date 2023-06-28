@@ -21,11 +21,14 @@ namespace SharpDSE
         public char[] LabelChars => new char[4] { (char)label[0], (char)label[1], (char)label[2], (char)label[3] };
         public byte[] LabelBytes => (byte[])label.Clone();
 
+        public int Offset { get; }
         public int Length => data.Length;
 
         public SwdlChunk(BinaryReader br)
         {
             Stream stream = br.BaseStream;
+            Offset = (int)stream.Position;
+
             br.ReadBytes(4).CopyTo(label, 0);
 
             stream.Seek(8, SeekOrigin.Current);
@@ -52,7 +55,8 @@ namespace SharpDSE
             if (!result.CanImportLabel(LabelBytes))
                 throw new InvalidCastException($"Managed {typeof(TChunk).Name} cannot import data from an unmanaged \"{LabelString.Replace("\x20", "\\x20")}\" chunk.");
 
-            result.Import(this, (byte[])data.Clone());
+            using var stream = new MemoryStream(data, 0, data.Length, false, false);
+            result.Import(this, new BinaryReader(stream));
             return result;
         }
     }

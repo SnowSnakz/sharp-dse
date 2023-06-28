@@ -13,7 +13,7 @@ namespace SharpDSE.SwdlChunks
             return label.SequenceEqual(SwdlChunk.PRGI);
         }
 
-        public void Import(SwdlChunk chunk, byte[] data)
+        public void Import(SwdlChunk chunk, BinaryReader reader)
         {
         }
     }

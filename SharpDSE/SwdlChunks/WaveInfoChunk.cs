@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SharpDSE.SwdlChunks
+﻿namespace SharpDSE.SwdlChunks
 {
     public sealed class WaveInfoChunk : ISwdlChunk<WaveInfoChunk>
     {
@@ -14,7 +8,7 @@ namespace SharpDSE.SwdlChunks
             return label.SequenceEqual(SwdlChunk.WAVI);
         }
 
-        public void Import(SwdlChunk chunk, byte[] data)
+        public void Import(SwdlChunk chunk, BinaryReader reader)
         {
         }
     }

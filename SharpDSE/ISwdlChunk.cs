@@ -9,6 +9,6 @@ namespace SharpDSE
     public interface ISwdlChunk<TChunk> where TChunk : class, ISwdlChunk<TChunk>, new()
     {
         bool CanImportLabel(byte[] label);
-        void Import(SwdlChunk chunk, byte[] data);
+        void Import(SwdlChunk chunk, BinaryReader reader);
     }
 }
