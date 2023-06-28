@@ -9,7 +9,7 @@ Right now the project is still in it's early stages.
 ### SWDL Files
 - [x] Load SWD files and display basic information
 - [ ] Load SWD chunks and display basic information
-  - [ ] WaveInfoChunk (WAVI)
+  - [x] WaveInfoChunk (WAVI)
   - [ ] ProgramInfoChunk (PRGI)
   - [ ] KeyGroupChunk (KGRP)
   - [ ] PcmDataChunk (PCMD)
