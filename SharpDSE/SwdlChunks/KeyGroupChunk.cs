@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SharpDSE.SwdlChunks
 {
-    public sealed class KeyGroupChunk : Chunk<KeyGroupChunk>
+    public sealed class KeyGroupChunk : SwdlChunk<KeyGroupChunk>
     {
         protected override bool CanImportLabel(byte[] label)
         {

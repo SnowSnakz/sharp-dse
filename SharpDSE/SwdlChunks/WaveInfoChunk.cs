@@ -2,7 +2,7 @@
 {
     // Anything marked with a ? means psy_commando put in the notes that it's only a possibility (not yet confirmed) that something is the correct usage of the raw data here.
 
-    public sealed class WaveInfoChunk : Chunk<WaveInfoChunk>
+    public sealed class WaveInfoChunk : SwdlChunk<WaveInfoChunk>
     {
         /// <summary>
         /// The data for a Sample Table Entry. 
