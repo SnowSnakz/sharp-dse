@@ -10,6 +10,8 @@
 
         public void Import(SwdlChunk chunk, BinaryReader reader)
         {
+            ushort sampleInfoTableOffset = reader.ReadUInt16_LE();
+
         }
     }
 }

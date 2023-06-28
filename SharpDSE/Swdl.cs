@@ -13,9 +13,16 @@ namespace SharpDSE
         private readonly List<SwdlChunk> chunks = new();
 
         private byte bankId, swdlId;
+        private int samplePointerCount, presetPointerCount;
 
         public DateTime CreationDate => creationDate;
         public string FileName => fileName;
+
+        public byte BankID => bankId;
+        public byte SwdlID => swdlId;
+
+        public int WaviSamplePointerCount => samplePointerCount;
+        public int PrgiPresetPointerCount => presetPointerCount;
 
         public SwdlChunk? GetChunk(byte[] label)
         {
@@ -79,8 +86,8 @@ namespace SharpDSE
 
             stream.Seek(2, SeekOrigin.Current);
 
-            ushort nbwavislots = br.ReadUInt16_LE();
-            ushort nbprgislots = br.ReadUInt16_LE();
+            samplePointerCount = br.ReadUInt16_LE();
+            presetPointerCount = br.ReadUInt16_LE();
 
             stream.Seek(2, SeekOrigin.Current);
 
@@ -89,7 +96,7 @@ namespace SharpDSE
             SwdlChunk? current = null;
             while(current == null || current.LabelString != "eod\x20")
             {
-                current = new SwdlChunk(br);
+                current = new SwdlChunk(this, br);
                 
                 switch(current.LabelString)
                 {

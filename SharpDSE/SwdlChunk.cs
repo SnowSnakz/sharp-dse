@@ -21,11 +21,14 @@ namespace SharpDSE
         public char[] LabelChars => new char[4] { (char)label[0], (char)label[1], (char)label[2], (char)label[3] };
         public byte[] LabelBytes => (byte[])label.Clone();
 
+        public Swdl Owner { get; }
         public int Offset { get; }
         public int Length => data.Length;
 
-        public SwdlChunk(BinaryReader br)
+        public SwdlChunk(Swdl owner, BinaryReader br)
         {
+            Owner = owner;
+
             Stream stream = br.BaseStream;
             Offset = (int)stream.Position;
 
