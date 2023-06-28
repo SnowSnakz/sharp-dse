@@ -5,6 +5,9 @@ It's very heavily based on the research notes compiled by psy_commando, and the 
 
 Right now the project is still in it's early stages.
 
+## What can I do with it at the moment?
+* If you have a Pokémon Mystery Dungeon: Explorers of Sky ROM, you can extra the rom and run bgm.swd through the SharpDSE.Test program to view information on the file and play all of the samples (currently without envolope.)
+
 ## Roadmap
 ### SWDL Files
 - [x] Load SWD files and display basic information
@@ -12,7 +15,7 @@ Right now the project is still in it's early stages.
   - [x] WaveInfoChunk (WAVI)
   - [ ] ProgramInfoChunk (PRGI)
   - [ ] KeyGroupChunk (KGRP)
-  - [ ] PcmDataChunk (PCMD)
+  - [x] PcmDataChunk (PCMD)
   - [x] ~~EndOfDataChunk (EOD\x20)~~ Nothing to load or display.
 
 ### SMDL Files
