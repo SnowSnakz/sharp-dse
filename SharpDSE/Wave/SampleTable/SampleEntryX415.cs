@@ -39,7 +39,7 @@ namespace SharpDSE.Wave.SampleTable
         public uint sampleRate;
         public uint pcmdSampleOffset;
         public uint loopStart;
-        public uint loopEnd;
+        public uint loopLength;
         public byte envelopeEnabled;
         public byte envelopeMultiplier;
         private byte unk19;
@@ -118,7 +118,7 @@ namespace SharpDSE.Wave.SampleTable
         }
         public bool Looped { get => loopSample == 1; set => loopSample = (byte)(value ? 1 : 0); }
         public uint LoopStart { get => loopStart; set => loopStart = value; }
-        public uint LoopEnd { get => loopEnd; set => loopEnd = value; }
+        public uint LoopLength { get => loopLength; set => loopLength = value; }
         public byte SamplesPerBlock { get => samplesPerBlock; set => samplesPerBlock = value; }
         public byte BitDepth { get => bitDepth; set => bitDepth = value; }
         public uint SampleRate { get => sampleRate; set => sampleRate = value; }
@@ -161,7 +161,7 @@ namespace SharpDSE.Wave.SampleTable
             sampleRate = reader.ReadUInt32_LE();
             pcmdSampleOffset = reader.ReadUInt32_LE();
             loopStart = reader.ReadUInt32_LE();
-            loopEnd = reader.ReadUInt32_LE();
+            loopLength = reader.ReadUInt32_LE();
             envelopeEnabled = reader.ReadByte(); // If not == 0, the volume envelope is processed. Otherwise its ignored.
             envelopeMultiplier = reader.ReadByte();
             unk19 = reader.ReadByte();
@@ -206,7 +206,7 @@ namespace SharpDSE.Wave.SampleTable
             writer.Write_LE(sampleRate);
             writer.Write_LE(pcmdSampleOffset);
             writer.Write_LE(loopStart);
-            writer.Write_LE(loopEnd);
+            writer.Write_LE(loopLength);
             writer.Write(envelopeEnabled);
             writer.Write(envelopeMultiplier);
             writer.Write(unk19);

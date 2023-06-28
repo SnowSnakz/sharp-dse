@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Concurrent;
 using System.Numerics;
 using System.Text;
 
@@ -6,6 +7,34 @@ namespace SharpDSE
 {
     public sealed class Swdl : IEnumerable<SwdlChunk>
     {
+        private class WaitForChunkTask
+        {
+            public bool hasChunk;
+            public SwdlChunk? chunk;
+            public byte[] label;
+
+            public WaitForChunkTask(byte[] label)
+            { 
+                this.label = label;
+            }
+
+            public static SwdlChunk TaskFn(object? state)
+            {
+                if (state is not WaitForChunkTask task)
+                    throw new InvalidOperationException("What...?");
+
+                // Wait for hasChunk to be true.
+                for (; !task.hasChunk;) ;
+
+                // If the chunk is null, it's probably not present in the file.
+                if (task.chunk == null)
+                    throw new InvalidOperationException("The specified chunk did not load.");
+
+                // Return the loaded chunk
+                return task.chunk;
+            }
+        }
+
         private static readonly byte[] Magic = new byte[4] { 0x73, 0x77, 0x64, 0x6C };
 
         private DateTime creationDate;
@@ -37,6 +66,23 @@ namespace SharpDSE
             }
 
             return null;
+        }
+
+        List<WaitForChunkTask> waiting = new();
+
+        public async Task<SwdlChunk> WaitForChunk(byte[] label)
+        {
+            SwdlChunk? result = GetChunk(label);
+
+            if(result != null)
+            {
+                return await Task.FromResult(result);
+            }
+
+            var state = new WaitForChunkTask(label);
+            waiting.Add(state);
+
+            return await new Task<SwdlChunk>(WaitForChunkTask.TaskFn, state);
         }
 
         public void Read(BinaryReader br)
@@ -103,7 +149,7 @@ namespace SharpDSE
             while(current == null || current.LabelString != "eod\x20")
             {
                 current = new SwdlChunk(this, br);
-                
+
                 switch(current.LabelString)
                 {
                     case "pcmd":
@@ -126,12 +172,31 @@ namespace SharpDSE
                             throw new InvalidDataException("The actual length of the wavi chunk does not match the length specified in the swdl header.");
                         }
                         break;
+                }
 
+                for(int j = 0; j < waiting.Count; j++)
+                {
+                    var state = waiting[j];
+
+                    if(state.label.SequenceEqual(current.LabelBytes))
+                    {
+                        state.chunk = current;
+                        state.hasChunk = true;
+                    }
+
+                    waiting.RemoveAt(j--);
                 }
 
                 // add chunk to chunk list
                 chunks.Add(current);
             }
+
+            foreach(var state in waiting)
+            {
+                state.hasChunk = true;
+            }
+
+            waiting.Clear();
         }
 
         public IEnumerator<SwdlChunk> GetEnumerator()

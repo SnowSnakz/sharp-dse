@@ -29,7 +29,7 @@ namespace SharpDSE.SwdlChunks
         public int Count => samples.Count;
         public bool IsReadOnly => false;
 
-        public ISampleTableEntry this[int index] 
+        public ISampleTableEntry this[int index]
         {
             get => samples[index];
             set

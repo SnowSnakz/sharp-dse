@@ -25,6 +25,8 @@ namespace SharpDSE
         public int Offset { get; }
         public int Length => data.Length;
 
+        private List<object> conv = new();
+
         public SwdlChunk(Swdl owner, BinaryReader br)
         {
             Owner = owner;
@@ -53,12 +55,20 @@ namespace SharpDSE
 
         public TChunk As<TChunk>() where TChunk : SwdlChunk<TChunk>, new()
         {
+            foreach(var obj in conv)
+            {
+                if (obj is TChunk objT)
+                    return objT;
+            }
+
             TChunk result = new();
 
             using var stream = new MemoryStream(data, 0, data.Length, false, false);
 
             if (!result.ImportLabel(LabelBytes, this, new BinaryReader(stream)))
                 throw new InvalidCastException($"Managed {typeof(TChunk).Name} failed to import data from \"{LabelString.Replace("\x20", "\\x20")}\" label.");
+
+            conv.Add(result);
 
             return result;
         }

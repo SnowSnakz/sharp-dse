@@ -1,5 +1,26 @@
-﻿using SharpDSE;
+﻿using OpenTK.Audio.OpenAL;
+using SharpDSE;
 using SharpDSE.SwdlChunks;
+using SharpDSE.Wave;
+
+// Initialize OpenAL
+ALDevice device = ALC.OpenDevice(null);
+if (device == ALDevice.Null)
+    throw new InvalidOperationException("Failed to open OpenAL device");
+
+ALContext context = ALC.CreateContext(device, Array.Empty<int>());
+if (context == ALContext.Null)
+    throw new InvalidOperationException("Failed to init OpenAL context");
+
+ALC.MakeContextCurrent(context);
+
+Console.WriteLine($"OpenAL: {AL.Get(ALGetString.Version)} {AL.Get(ALGetString.Vendor)}");
+
+
+int source = AL.GenSource();
+int buffer;// = AL.GenBuffer();
+
+// AL.BindBufferToSource(source, buffer);
 
 Console.WriteLine("Print information about SWDL: (path to swdl file, or blank to skip this test)");
 string? file = Console.ReadLine();
@@ -35,7 +56,9 @@ if (!string.IsNullOrWhiteSpace(file))
     Console.WriteLine($"Version:       0x{swdl.Version:X4}");
     Console.WriteLine($"File Name:     {swdl.FileName}");
     Console.WriteLine($"Creation Date: {swdl.CreationDate}");
-    
+
+    bool hadSamples = false;
+
     // Print some information about the chunks contained within the file.
     Console.WriteLine($"Chunks: {swdl.ChunkCount}");
     foreach (SwdlChunk chunk in swdl)
@@ -80,8 +103,92 @@ if (!string.IsNullOrWhiteSpace(file))
 
             case 1:
                 WaveInfoChunk wavi = chunk.As<WaveInfoChunk>();
-                Console.WriteLine($"    Sample Count: {wavi.SampleEntryCount}");
+                Console.WriteLine($"    Sample Count: {wavi.Count}");
+
+                hadSamples = wavi.Count > 0;
+
                 break;
+        }
+    }
+
+    Console.WriteLine();
+
+    if(hadSamples)
+    {
+        Console.Write("Would you like to play some random samples from the swdl file? [Y/N, default=N]: ");
+
+        bool playSamples;
+
+        ConsoleKeyInfo ki = Console.ReadKey();
+        Console.WriteLine();
+
+        switch(ki.KeyChar)
+        {
+            default:
+                playSamples = false;
+                break;
+
+            case 'Y':
+            case 'y':
+                playSamples = true;
+                break;
+        }
+
+        if(playSamples)
+        {
+            WaveInfoChunk? wavi = swdl.GetChunk(SwdlChunk.WAVI)?.As<WaveInfoChunk>();
+
+            if(wavi == null)
+                throw new InvalidOperationException();
+
+            PcmDataChunk? pcmd = swdl.GetChunk(SwdlChunk.PCMD)?.As<PcmDataChunk>();
+
+            if(pcmd == null)
+            {
+                Console.Write("The current swdl file does not define a PCMD chunk, which likely means it's referencing an external PCMD chunk... Would you like to load the SWDL file that contains this chunk? ");
+                if(Console.ReadKey().KeyChar == 'y')
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Please specify the path to the external swdl file: ");
+
+                    using var fs2 = File.OpenRead(Console.ReadLine() ?? "");
+
+                    Swdl external = new Swdl();
+                    external.Read(new BinaryReader(fs2));
+
+                    pcmd = external.GetChunk(SwdlChunk.PCMD)?.As<PcmDataChunk>();
+                }
+            }
+
+            if(pcmd == null)
+                throw new InvalidDataException("No PCMD chunk found in specified file...");
+
+            if (playSamples)
+            {
+                for(int i = 0; i < wavi.Count; i++)
+                {
+                    var sample = wavi[i];
+
+                    Console.WriteLine($"Loading {i} of {wavi.Count}... ({sample.BitDepth}-bits {sample.Format} - {sample.LoopLength * sample.SamplesPerBlock} samples @ {sample.SampleRate}hz)");
+
+                    SampleData data = pcmd.LoadSampleData(sample);
+
+                    buffer = AL.GenBuffer();
+                    AL.BufferData(buffer, ALFormat.Mono16, data.PcmData, (int)sample.SampleRate);
+                    AL.BindBufferToSource(source, buffer);
+
+                    Console.Write("Playing... ");
+                    AL.SourcePlay(source);
+
+                    while(AL.GetSourceState(source) == ALSourceState.Playing);
+
+                    Console.WriteLine("Done!");
+                    Console.WriteLine();
+
+                    AL.DeleteBuffer(buffer);
+                }
+            }
+
         }
     }
 

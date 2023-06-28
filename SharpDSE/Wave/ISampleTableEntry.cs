@@ -76,9 +76,9 @@ namespace SharpDSE.Wave
         uint LoopStart { get; set; }
 
         /// <summary>
-        /// The sample index of the loop's ending point.
+        /// The length of the loop in blocks. (1 block = 4 bytes)
         /// </summary>
-        uint LoopEnd { get; set; }
+        uint LoopLength { get; set; }
 
         /// <summary>
         /// The number of samples per block (1 block = 4 bytes)
