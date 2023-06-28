@@ -14,12 +14,16 @@ namespace SharpDSE
 
         private byte bankId, swdlId;
         private int samplePointerCount, presetPointerCount;
+        private ushort version;
 
         public DateTime CreationDate => creationDate;
         public string FileName => fileName;
+        public ushort Version => version;
 
         public byte BankID => bankId;
         public byte SwdlID => swdlId;
+
+        public int ChunkCount => chunks.Count;
 
         public int WaviSamplePointerCount => samplePointerCount;
         public int PrgiPresetPointerCount => presetPointerCount;
@@ -37,6 +41,8 @@ namespace SharpDSE
 
         public void Read(BinaryReader br)
         {
+            chunks.Clear();
+
             Stream stream = br.BaseStream;
 
             byte[] ibuf = br.ReadBytes(4);
@@ -48,7 +54,7 @@ namespace SharpDSE
 
             uint flen = br.ReadUInt32_LE();
             
-            ushort version = br.ReadUInt16_LE();
+            version = br.ReadUInt16_LE();
             if(version != 0x415)
                 throw new NotSupportedException("Only swdl version 0x415 is supported at this time.");
 

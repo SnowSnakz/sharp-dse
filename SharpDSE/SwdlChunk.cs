@@ -51,15 +51,15 @@ namespace SharpDSE
                 throw new IOException($"Unable to read correct amount of data in {LabelString.Replace("\x20", "\\x20")}.");
         }
 
-        public TChunk As<TChunk>() where TChunk : class, ISwdlChunk<TChunk>, new()
+        public TChunk As<TChunk>() where TChunk : Chunk<TChunk>, new()
         {
             TChunk result = new();
 
-            if (!result.CanImportLabel(LabelBytes))
-                throw new InvalidCastException($"Managed {typeof(TChunk).Name} cannot import data from an unmanaged \"{LabelString.Replace("\x20", "\\x20")}\" chunk.");
-
             using var stream = new MemoryStream(data, 0, data.Length, false, false);
-            result.Import(this, new BinaryReader(stream));
+
+            if (!result.ImportLabel(LabelBytes, this, new BinaryReader(stream)))
+                throw new InvalidCastException($"Managed {typeof(TChunk).Name} failed to import data from \"{LabelString.Replace("\x20", "\\x20")}\" label.");
+
             return result;
         }
     }

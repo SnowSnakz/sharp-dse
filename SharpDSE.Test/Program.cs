@@ -20,22 +20,31 @@ if (!string.IsNullOrWhiteSpace(file))
     using var fs = File.OpenRead(file);
 
     // Try to load it into a managed Swdl object.
+    DateTime start = DateTime.Now;
+
+    Console.WriteLine();
+    Console.WriteLine($"Attempting to load \"{file}\" as SWDL file (Length = 0x{fs.Length:x})");
+
     Swdl swdl = new Swdl();
     swdl.Read(new BinaryReader(fs));
 
+    Console.WriteLine($"Took {DateTime.Now - start} to load the specified file.");
     Console.WriteLine();
 
     // Print some of the basic information contained within the file.
+    Console.WriteLine($"Version:       0x{swdl.Version:X4}");
     Console.WriteLine($"File Name:     {swdl.FileName}");
     Console.WriteLine($"Creation Date: {swdl.CreationDate}");
     
     // Print some information about the chunks contained within the file.
-    Console.WriteLine($"Chunks:");
+    Console.WriteLine($"Chunks: {swdl.ChunkCount}");
     foreach (SwdlChunk chunk in swdl)
     {
         byte[] label = chunk.LabelBytes;
 
         string type = "Unknown";
+        int extra = 0;
+
         switch (chunk.LabelString)
         {
             case "pcmd":
@@ -44,6 +53,7 @@ if (!string.IsNullOrWhiteSpace(file))
 
             case "wavi":
                 type = "Wave Information Chunk";
+                extra = 1;
                 break;
 
             case "prgi":
@@ -63,6 +73,16 @@ if (!string.IsNullOrWhiteSpace(file))
         Console.WriteLine($"    Label:  {chunk.LabelString} {{0x{label[0]:X2}, 0x{label[1]:X2}, 0x{label[2]:X2}, 0x{label[3]:X2}}}");
         Console.WriteLine($"    Length: 0x{chunk.Length:X8}");
 
+        switch(extra)
+        {
+            default:
+                break;
+
+            case 1:
+                WaveInfoChunk wavi = chunk.As<WaveInfoChunk>();
+                Console.WriteLine($"    Sample Count: {wavi.SampleEntryCount}");
+                break;
+        }
     }
 
 }

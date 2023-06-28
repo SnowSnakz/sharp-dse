@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SharpDSE
 {
-    internal static class BinaryExtensions
+    internal static class Extensions
     {
         private static uint ToUInt32_LE(byte[] ibuf)
         {
@@ -37,6 +37,5 @@ namespace SharpDSE
             byte[] ibuf = br.ReadBytes(2);
             return ToUInt16_LE(ibuf);
         }
-
     }
 }

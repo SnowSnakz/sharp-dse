@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace SharpDSE.SwdlChunks
 {
-    public sealed class ProgramInfoChunk : ISwdlChunk<ProgramInfoChunk>
+    public sealed class ProgramInfoChunk : Chunk<ProgramInfoChunk>
     {
-        public bool CanImportLabel(byte[] label)
+        protected override bool CanImportLabel(byte[] label)
         {
             return label.SequenceEqual(SwdlChunk.PRGI);
         }
 
-        public void Import(SwdlChunk chunk, BinaryReader reader)
+        protected override void Import(SwdlChunk chunk, BinaryReader reader)
         {
         }
     }
