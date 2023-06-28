@@ -17,12 +17,14 @@ namespace SharpDSE.SwdlChunks
      *     
      *   Return true if you attempt to load anything (regardless of if you actually loaded anything), false otherwise.
      *   
+     *   
+     *   Note: The reason why ISampleTableEntry is recommended to be a struct, is because modifying the SampleTable would introduce errors due to C# pass-by-reference. (classes)
+     *     This isn't a big deal if you are extremely careful not to reuse any SampleTable entries, but in practice it's better use pass-by-copy (structs) for this.
      */
     public class WaveInfoChunk : SwdlChunk<WaveInfoChunk>, IList<ISampleTableEntry>, IBinaryReadable, IBinaryWritable
     {
-        List<ISampleTableEntry> samples = new();
-        private SwdlChunk chunk;
-
+        private readonly List<ISampleTableEntry> samples = new();
+        private SwdlChunk? chunk;
 
         public int Count => samples.Count;
         public bool IsReadOnly => false;
@@ -47,19 +49,19 @@ namespace SharpDSE.SwdlChunks
         {
             this.chunk = chunk;
 
-            // Allocate sample info table
+            // Clear any existing entries, if they are present.
             samples.Clear();
 
+            // Read the entries.
             Read(reader);
-
         }
-
+        
         protected virtual bool DetectFormat(SwdlChunk chunk, ushort version, BinaryReader reader)
         {
             return false;
         }
 
-        private void ReadEntries<TEntry>(ushort[] sampleOffsets, BinaryReader br) where TEntry : ISampleTableEntry, IBinaryReadable, new()
+        protected void ReadEntries<TEntry>(ushort[] sampleOffsets, BinaryReader br) where TEntry : ISampleTableEntry, IBinaryReadable, new()
         {
             var stream = br.BaseStream;
 
@@ -85,52 +87,76 @@ namespace SharpDSE.SwdlChunks
 
         public int IndexOf(ISampleTableEntry item)
         {
-            throw new NotImplementedException();
+            return samples.IndexOf(item);
         }
 
         public void Insert(int index, ISampleTableEntry item)
         {
-            throw new NotImplementedException();
+            item.ID = checked((ushort)index);
+            samples.Insert(index, item);
+            
+            // All entries after the inserted one probably have an outdated index, so update them.
+            for(int i = index + 1; i < samples.Count; i++)
+            {
+                samples[i].ID = checked((ushort)i);
+            }
         }
 
         public void RemoveAt(int index)
         {
-            throw new NotImplementedException();
+            samples.RemoveAt(index);
+
+            // All entries after the removed one probably have an outdated index, so update them.
+            for(int i = index; i < samples.Count; i++)
+            {
+                samples[i].ID = checked((ushort)i);
+            }
         }
 
         public void Add(ISampleTableEntry item)
         {
-            throw new NotImplementedException();
+            // Set the ID of the item being added.
+            item.ID = checked((ushort)samples.Count);
+            samples.Add(item);
         }
 
         public void Clear()
         {
-            throw new NotImplementedException();
+            samples.Clear();
         }
 
         public bool Contains(ISampleTableEntry item)
         {
-            throw new NotImplementedException();
+            return samples.Contains(item);
         }
 
         public void CopyTo(ISampleTableEntry[] array, int arrayIndex)
         {
-            throw new NotImplementedException();
+            samples.CopyTo(array, arrayIndex);
         }
 
         public bool Remove(ISampleTableEntry item)
         {
-            throw new NotImplementedException();
+            int index = samples.IndexOf(item);
+            
+            if(index != -1)
+            {
+                // Calling RemoveAt because it has code to update the ID properties of the affected entries.
+                RemoveAt(index);
+                return true;
+            }
+
+            return false;
         }
 
         public IEnumerator<ISampleTableEntry> GetEnumerator()
         {
-            throw new NotImplementedException();
+            return samples.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            throw new NotImplementedException();
+            return samples.GetEnumerator();
         }
 
         public void Write(BinaryWriter writer)
@@ -172,6 +198,9 @@ namespace SharpDSE.SwdlChunks
 
         public void Read(BinaryReader reader)
         {
+            if (chunk == null)
+                throw new InvalidOperationException("Unable to process that request at this time.");
+
             // Read the sample entry offsets.
             ushort[] sampleOffsets = new ushort[chunk.Owner.WaviSamplePointerCount];
             for (int i = 0; i < sampleOffsets.Length; i++)
