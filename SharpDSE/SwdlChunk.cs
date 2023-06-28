@@ -51,7 +51,7 @@ namespace SharpDSE
                 throw new IOException($"Unable to read correct amount of data in {LabelString.Replace("\x20", "\\x20")}.");
         }
 
-        public TChunk As<TChunk>() where TChunk : Chunk<TChunk>, new()
+        public TChunk As<TChunk>() where TChunk : SwdlChunk<TChunk>, new()
         {
             TChunk result = new();
 
@@ -61,6 +61,26 @@ namespace SharpDSE
                 throw new InvalidCastException($"Managed {typeof(TChunk).Name} failed to import data from \"{LabelString.Replace("\x20", "\\x20")}\" label.");
 
             return result;
+        }
+    }
+
+    public abstract class SwdlChunk<TChunk> where TChunk : SwdlChunk<TChunk>, new()
+    {
+        private SwdlChunk? chunk;
+        public SwdlChunk From => chunk ?? throw new InvalidOperationException("The chunk is not ready to process that request.");
+
+        protected abstract bool CanImportLabel(byte[] label);
+        protected abstract void Import(SwdlChunk chunk, BinaryReader reader);
+
+        internal bool ImportLabel(byte[] label, SwdlChunk chunk, BinaryReader reader)
+        {
+            if (!CanImportLabel(label))
+                return false;
+
+            this.chunk = chunk;
+
+            Import(chunk, reader);
+            return true;
         }
     }
 }
