@@ -25,7 +25,7 @@ namespace SharpDSE.SwdlChunks
             reader.BaseStream.CopyTo(permanent);
         }
 
-        public virtual SampleData LoadSampleData(ISampleTableEntry entry)
+        public virtual SampleData LoadSampleData(ISampleInfo entry)
         {
             if (permanent == null || sampleReader == null)
                 throw new InvalidOperationException("Not ready to process that request at the moment.");

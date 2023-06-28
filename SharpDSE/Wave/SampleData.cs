@@ -35,7 +35,7 @@ namespace SharpDSE.Wave
         public short[] PcmData => (short[])data.Clone();
         public uint SampleRate => sampleRate;
 
-        public virtual void Load(ISampleTableEntry entry, BinaryReader reader)
+        public virtual void Load(ISampleInfo entry, BinaryReader reader)
         {
             sampleRate = entry.SampleRate;
             data = new short[entry.LoopLength * entry.SamplesPerBlock];
@@ -110,11 +110,8 @@ namespace SharpDSE.Wave
 
             ibuf = reader.ReadBytes(2);
 
-            if (!BitConverter.IsLittleEndian)
-                Array.Reverse(ibuf);
-
-            short stepIndex = BitConverter.ToInt16(ibuf);
-            short step = ImaStepTable[stepIndex];
+            short stepIndex = ibuf[0] < 89 ? (ibuf[1] < 89 ? ibuf[1] : ibuf[0]) : ibuf[1];
+            short step = ImaStepTable[stepIndex % 89];
 
             for (int i = 0; i < data.Length; i += 2)
             {

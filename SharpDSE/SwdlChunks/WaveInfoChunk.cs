@@ -1,5 +1,5 @@
 ﻿using SharpDSE.Wave;
-using SharpDSE.Wave.SampleTable;
+using SharpDSE.Wave.Common;
 using System.Collections;
 
 namespace SharpDSE.SwdlChunks
@@ -21,15 +21,19 @@ namespace SharpDSE.SwdlChunks
      *   Note: The reason why ISampleTableEntry is recommended to be a struct, is because modifying the SampleTable would introduce errors due to C# pass-by-reference. (classes)
      *     This isn't a big deal if you are extremely careful not to reuse any SampleTable entries, but in practice it's better use pass-by-copy (structs) for this.
      */
-    public class WaveInfoChunk : SwdlChunk<WaveInfoChunk>, IList<ISampleTableEntry>, IBinaryReadable, IBinaryWritable
+    public class WaveInfoChunk : SwdlChunk<WaveInfoChunk>, IList<ISampleInfo>, IBinaryReadable, IBinaryWritable
     {
-        private readonly List<ISampleTableEntry> samples = new();
+        private readonly List<ISampleInfo> samples = new();
         private SwdlChunk? chunk;
+
+        // A dictionary that is used to convert ids to new ones.
+        // On the managed side of things, empty entries are stripped, so all of the ids may change (destructively)
+        private readonly Dictionary<int, int> oldref = new();
 
         public int Count => samples.Count;
         public bool IsReadOnly => false;
 
-        public ISampleTableEntry this[int index]
+        public ISampleInfo this[int index]
         {
             get => samples[index];
             set
@@ -37,6 +41,40 @@ namespace SharpDSE.SwdlChunks
                 value.ID = checked((ushort)index); // "checked" will throw an exception if an overflow happens during the cast. (Overflow == index too big for ushort)
                 samples[index] = value;
             }
+        }
+
+        /// <summary>
+        /// Same as <see cref="this[int]"/>, but you can specify if the provided <paramref name="index"/> assumes that empty entries still exist.
+        /// Since empty entries are removed on the managed side of things, the actual IDs of samples will have changed to remove the gaps.
+        /// This can be a problem for songs/banks that have not been updated to the new ids, so setting <paramref name="legacy"/> to true
+        /// will allow the correct sample to be retrieved in those cases.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="legacy"></param>
+        /// <returns></returns>
+        public ISampleInfo Get(int index, bool legacy)
+        {
+            if(legacy)
+            {
+                index = oldref[index];
+            }
+
+            return samples[index];
+        }
+
+        public bool TryFindOldID(int index, out int old)
+        {
+            foreach((int oldId, int newId) in oldref)
+            {
+                if(newId == index)
+                {
+                    old = oldId;
+                    return true;
+                }
+            }
+
+            old = 0;
+            return false;
         }
 
         protected override bool CanImportLabel(byte[] label)
@@ -49,9 +87,6 @@ namespace SharpDSE.SwdlChunks
         {
             this.chunk = chunk;
 
-            // Clear any existing entries, if they are present.
-            samples.Clear();
-
             // Read the entries.
             Read(reader);
         }
@@ -61,7 +96,7 @@ namespace SharpDSE.SwdlChunks
             return false;
         }
 
-        protected void ReadEntries<TEntry>(ushort[] sampleOffsets, BinaryReader br) where TEntry : ISampleTableEntry, IBinaryReadable, new()
+        protected void ReadEntries<TEntry>(ushort[] sampleOffsets, BinaryReader br) where TEntry : ISampleInfo, IBinaryReadable, new()
         {
             var stream = br.BaseStream;
 
@@ -81,16 +116,24 @@ namespace SharpDSE.SwdlChunks
                 // Read sample entry.
                 TEntry result = new();
                 result.Read(br);
+
+                // Add old id to old-reference table.
+                oldref.Add(i, samples.Count);
+
+                // Update the id.
+                result.ID = (ushort)samples.Count;
+
+                // Add the sample entry.
                 samples.Add(result);
             }
         }
 
-        public int IndexOf(ISampleTableEntry item)
+        public int IndexOf(ISampleInfo item)
         {
             return samples.IndexOf(item);
         }
 
-        public void Insert(int index, ISampleTableEntry item)
+        public void Insert(int index, ISampleInfo item)
         {
             item.ID = checked((ushort)index);
             samples.Insert(index, item);
@@ -99,6 +142,21 @@ namespace SharpDSE.SwdlChunks
             for(int i = index + 1; i < samples.Count; i++)
             {
                 samples[i].ID = checked((ushort)i);
+            }
+
+            // Update old ids.
+            var oldIds = oldref.Keys.ToArray();
+            var newIds = oldref.Values.ToArray();
+
+            for(int i = 0; i < oldIds.Length; i++)
+            {
+                var oldId = oldIds[i];
+                var newId = newIds[i];
+
+                if (newId >= index)
+                {
+                    oldref[oldId] = newId + 1;
+                }
             }
         }
 
@@ -111,9 +169,30 @@ namespace SharpDSE.SwdlChunks
             {
                 samples[i].ID = checked((ushort)i);
             }
+
+            // Update old ids.
+            var oldIds = oldref.Keys.ToArray();
+            var newIds = oldref.Values.ToArray();
+
+            for (int i = 0; i < oldIds.Length; i++)
+            {
+                var oldId = oldIds[i];
+                var newId = newIds[i];
+
+                if (newId == index)
+                {
+                    oldref.Remove(oldId);
+                    continue;
+                }
+
+                if (newId > index)
+                {
+                    oldref[oldId] = newId - 1;
+                }
+            }
         }
 
-        public void Add(ISampleTableEntry item)
+        public void Add(ISampleInfo item)
         {
             // Set the ID of the item being added.
             item.ID = checked((ushort)samples.Count);
@@ -125,17 +204,17 @@ namespace SharpDSE.SwdlChunks
             samples.Clear();
         }
 
-        public bool Contains(ISampleTableEntry item)
+        public bool Contains(ISampleInfo item)
         {
             return samples.Contains(item);
         }
 
-        public void CopyTo(ISampleTableEntry[] array, int arrayIndex)
+        public void CopyTo(ISampleInfo[] array, int arrayIndex)
         {
             samples.CopyTo(array, arrayIndex);
         }
 
-        public bool Remove(ISampleTableEntry item)
+        public bool Remove(ISampleInfo item)
         {
             int index = samples.IndexOf(item);
             
@@ -149,7 +228,7 @@ namespace SharpDSE.SwdlChunks
             return false;
         }
 
-        public IEnumerator<ISampleTableEntry> GetEnumerator()
+        public IEnumerator<ISampleInfo> GetEnumerator()
         {
             return samples.GetEnumerator();
         }
@@ -172,7 +251,7 @@ namespace SharpDSE.SwdlChunks
             for (int i = 0; i < samples.Count; i++)
             {
                 // Grab the current entry
-                ISampleTableEntry sample = samples[i];
+                ISampleInfo sample = samples[i];
 
                 // If the entry is writable, record the temporary streams position as the offset.
                 if(sample is IBinaryWritable writable)
@@ -201,6 +280,12 @@ namespace SharpDSE.SwdlChunks
             if (chunk == null)
                 throw new InvalidOperationException("Unable to process that request at this time.");
 
+            // Get rid of the previous old-reference table.
+            oldref.Clear();
+
+            // Get rid of the previous sample table.
+            samples.Clear();
+
             // Read the sample entry offsets.
             ushort[] sampleOffsets = new ushort[chunk.Owner.WaviSamplePointerCount];
             for (int i = 0; i < sampleOffsets.Length; i++)
@@ -222,8 +307,9 @@ namespace SharpDSE.SwdlChunks
                     ReadEntries<SampleEntryX415>(sampleOffsets, reader);
                     break;
 
-                case 0x405:
-                    throw new NotImplementedException("Version 0x405 is not yet implemented.");
+                case 0x402:
+                    ReadEntries<SampleEntryX402>(sampleOffsets, reader);
+                    break;
             }
         }
     }

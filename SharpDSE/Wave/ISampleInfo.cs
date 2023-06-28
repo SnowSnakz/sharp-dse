@@ -9,7 +9,7 @@ namespace SharpDSE.Wave
     /// <summary>
     /// Represents an entry into the wavi chunk's sample info table.
     /// </summary>
-    public interface ISampleTableEntry
+    public interface ISampleInfo
     {
         /// <summary>
         /// The ID / Index of this sample.

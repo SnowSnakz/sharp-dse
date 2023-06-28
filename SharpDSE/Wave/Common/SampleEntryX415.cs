@@ -4,14 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SharpDSE.Wave.SampleTable
+namespace SharpDSE.Wave.Common
 {
     /// <summary>
     /// The data for a Sample Table Entry. 
     /// Although the entire structure is loaded, variables with unknown purposes are private to make things easier.
     /// The private variables use the exact same type and naming patterns found in psy_commando's notes.
     /// </summary>
-    public struct SampleEntryX415 : ISampleTableEntry, IBinaryWritable, IBinaryReadable
+    public struct SampleEntryX415 : ISampleInfo, IBinaryWritable, IBinaryReadable
     {
         private ushort unk1; // (possible entry marker)
         public ushort index;
